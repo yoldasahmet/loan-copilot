@@ -13,10 +13,13 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://loancopilot:loancopilot@localhost:5433/loancopilot"
     data_dir: Path = REPO_ROOT / ".data"
     session_secret: str = "change-me"
+    llm_provider: str = "auto"  # auto | anthropic | openai | openrouter
     anthropic_api_key: str = ""
-    llm_model: str = "claude-sonnet-5-5"
-    llm_price_input_per_mtok: float = 3.0
-    llm_price_output_per_mtok: float = 15.0
+    openai_api_key: str = ""
+    openrouter_api_key: str = ""
+    llm_model: str = "claude-opus-5-5"
+    llm_price_input_per_mtok: float = 4.0
+    llm_price_output_per_mtok: float = 20.0
     embeddings_backend: str = "local"
     embedding_model: str = "BAAI/bge-m3"
     rerank: str = "on"

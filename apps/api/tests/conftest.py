@@ -104,3 +104,13 @@ def fake_docling(monkeypatch: pytest.MonkeyPatch) -> None:
         return ParsedPdf([Block(k, t, p) for k, t, p in FAKE_PDF_BLOCKS], page_count=3)
 
     monkeypatch.setattr(ingest, "parse_pdf", parse)
+
+
+@pytest.fixture
+def fake_llm(monkeypatch: pytest.MonkeyPatch):  # noqa: ANN201
+    from loancopilot import llm
+    from tests.fake_llm import FakeLlm
+
+    fake = FakeLlm()
+    monkeypatch.setattr(llm, "_call", fake.call)
+    return fake

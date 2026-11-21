@@ -76,7 +76,7 @@ README version (use this wording or close to it):
 | Bank statements | CAMT.053 XML (stdlib `xml.etree`) and CSV | |
 | Embeddings | `BAAI/bge-m3` via sentence-transformers, 1024 dims, CPU | `EMBEDDINGS_BACKEND=fake` for tests and CI |
 | Reranker | `BAAI/bge-reranker-v2-m3` via sentence-transformers `CrossEncoder` | Model name in env |
-| LLM | Anthropic Claude (or codex), official Python SDK | Model in `LLM_MODEL`; every call goes through `llm.py` |
+| LLM | Anthropic Claude, OpenAI or OpenRouter (official Anthropic and OpenAI Python SDKs) | Provider in `LLM_PROVIDER` (`auto` picks the first key that is set), model in `LLM_MODEL`; every call goes through `llm.py` |
 | Agent | LangGraph with the Postgres checkpointer | |
 | Evaluation | Own metric code + RAGAS (faithfulness, answer relevancy) | |
 | Tracing | OpenTelemetry → Arize Phoenix (optional Compose profile `tracing`) | Off when `PHOENIX_COLLECTOR_ENDPOINT` is unset |
@@ -86,7 +86,7 @@ README version (use this wording or close to it):
 
 The embedding and reranker models download on first use (a few GB). Say so in the README.
 
-**Environment variables** (`.env.example`): `DATABASE_URL`, `DATA_DIR` (default `./.data`), `SESSION_SECRET`, `ANTHROPIC_API_KEY`, `LLM_MODEL`, `LLM_PRICE_INPUT_PER_MTOK`, `LLM_PRICE_OUTPUT_PER_MTOK` (USD, for cost tracking), `EMBEDDINGS_BACKEND` (`local` | `fake`), `EMBEDDING_MODEL`, `RERANK` (`on` | `off`), `RERANKER_MODEL`, `ASSUMED_INTEREST_RATE` (default `0.08`), `RATE_LIMIT_PER_MINUTE` (default `30`), `PHOENIX_COLLECTOR_ENDPOINT` (optional), `API_URL` (used by the Next.js rewrite).
+**Environment variables** (`.env.example`): `DATABASE_URL`, `DATA_DIR` (default `./.data`), `SESSION_SECRET`, `LLM_PROVIDER` (`auto` | `anthropic` | `openai` | `openrouter`), `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `LLM_MODEL`, `LLM_PRICE_INPUT_PER_MTOK`, `LLM_PRICE_OUTPUT_PER_MTOK` (USD, for cost tracking), `EMBEDDINGS_BACKEND` (`local` | `fake`), `EMBEDDING_MODEL`, `RERANK` (`on` | `off`), `RERANKER_MODEL`, `ASSUMED_INTEREST_RATE` (default `0.08`), `RATE_LIMIT_PER_MINUTE` (default `30`), `PHOENIX_COLLECTOR_ENDPOINT` (optional), `API_URL` (used by the Next.js rewrite).
 
 ---
 
@@ -591,7 +591,7 @@ Then the extraction, backtest (with baselines) and memo-verification tables, and
    - injection flagging
 
    End with "This is a portfolio project, not legal advice."
-8. Quickstart for an empty app, plus requirements: Docker, Python 3.12 + uv, Node + pnpm, an Anthropic API key, disk space for models.
+8. Quickstart for an empty app, plus requirements: Docker, Python 3.12 + uv, Node + pnpm, an Anthropic, OpenAI or OpenRouter API key, disk space for models.
 9. Importing your own historical cases (link to `docs/import-format.md`).
 10. Tech stack.
 11. The note: "All data shown in screenshots is synthetic. Companies, people, lenders and figures are fictional."

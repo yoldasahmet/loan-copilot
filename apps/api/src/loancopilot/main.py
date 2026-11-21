@@ -1,6 +1,6 @@
 from fastapi import APIRouter, FastAPI
 
-from loancopilot.routes import admin, auth, cases, documents
+from loancopilot.routes import admin, analysis, auth, cases, documents
 
 app = FastAPI(
     title="SME Loan Copilot API",
@@ -18,7 +18,7 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-for module in (auth, cases, documents, admin):
+for module in (auth, cases, documents, analysis, admin):
     api.include_router(module.router)
 
 app.include_router(api)

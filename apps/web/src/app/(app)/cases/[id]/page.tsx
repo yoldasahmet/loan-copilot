@@ -2,6 +2,7 @@
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { AnalysisTab } from "@/components/analysis/analysis-tab";
 import { CaseHeader } from "@/components/case/case-header";
 import { DocumentsTab } from "@/components/case/documents-tab";
 import { NaturalPersonBanner } from "@/components/case/natural-person-banner";
@@ -12,7 +13,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Case } from "@/lib/api";
 import { useApi } from "@/lib/use-api";
 
-const TABS = { overview: "Overview", documents: "Documents" } as const;
+const TABS = {
+  overview: "Overview",
+  documents: "Documents",
+  analysis: "Analysis",
+} as const;
 
 function CasePage() {
   const { id } = useParams<{ id: string }>();
@@ -54,6 +59,9 @@ function CasePage() {
         </TabsContent>
         <TabsContent value="documents" className="pt-4">
           <DocumentsTab caseId={c.id} />
+        </TabsContent>
+        <TabsContent value="analysis" className="pt-4">
+          <AnalysisTab caseId={c.id} />
         </TabsContent>
       </Tabs>
     </div>

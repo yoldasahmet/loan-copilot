@@ -82,3 +82,58 @@ export const SECTORS: Record<string, string> = {
   healthcare_practices: "Healthcare practices",
   agriculture: "Agriculture",
 };
+
+export function formatRatio(
+  value: number | null,
+  kind: "percent" | "multiple",
+): string {
+  if (value === null || value === undefined) return "—";
+  return kind === "percent"
+    ? `${(value * 100).toFixed(1)}%`
+    : `${value.toFixed(2)}x`;
+}
+
+export function formatPercent(
+  value: number | null | undefined,
+  digits = 0,
+): string {
+  if (value === null || value === undefined) return "—";
+  return `${(value * 100).toFixed(digits)}%`;
+}
+
+/** "2026-03" → "Mar 26" */
+export function monthLabel(key: string): string {
+  const [y, m] = key.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("en-GB", {
+    month: "short",
+    year: "2-digit",
+  });
+}
+
+export const FIGURE_LABELS: Record<string, string> = {
+  revenue: "Revenue",
+  cost_of_sales: "Cost of sales",
+  gross_profit: "Gross profit",
+  operating_expenses: "Operating expenses",
+  ebitda: "EBITDA",
+  depreciation: "Depreciation",
+  interest_expense: "Interest expense",
+  net_income: "Net income",
+  total_assets: "Total assets",
+  current_assets: "Current assets",
+  cash: "Cash",
+  equity: "Equity",
+  current_liabilities: "Current liabilities",
+  long_term_debt: "Long-term debt",
+};
+
+export const CATEGORY_LABELS: Record<string, string> = {
+  customers: "Customers",
+  suppliers: "Suppliers",
+  salaries: "Salaries",
+  tax: "Tax",
+  rent: "Rent",
+  loan_repayment: "Loan repayments",
+  bank_fees: "Bank fees",
+  other: "Other",
+};
