@@ -1,0 +1,33 @@
+# Demo data and local tooling — never committed (see docs/adr/0004)
+local/
+.data/
+eval/results/
+apps/api/eval/results/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Model caches
+.cache/
+huggingface/
+models/
+
+# Web
+node_modules/
+.next/
+apps/web/next-env.d.ts
+*.tsbuildinfo
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
