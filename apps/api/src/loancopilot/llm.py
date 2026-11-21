@@ -26,6 +26,7 @@ PROMPTS_DIR = Path(__file__).parent / "prompts"
 # Server-side fallback: if the model declines, the API re-runs the request on a
 # recommended fallback model inside the same call (routed by refusal category).
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
+ATTEMPTS = 2  # one retry for an empty or unparseable reply
 
 
 class LlmError(Exception):
@@ -248,29 +249,35 @@ def complete(*, kind: str, prompt: Prompt, user_content: str, case_id: uuid.UUID
              user_id: uuid.UUID | None = None, source_ids: list[str] | None = None,
              schema: dict | None = None, pii: Pseudonymiser | None = None,
              max_tokens: int = 16000, effort: str = "medium") -> LlmResult:  # fmt: skip
-    """One non-streaming call. With `schema`, the response is JSON constrained by the API."""
+    """One non-streaming call. With `schema`, the response is JSON constrained by the API.
+    An empty or invalid reply (reasoning models sometimes spend the whole budget thinking) is
+    retried once; every attempt is logged."""
     check_rate_limit(user_id)
     pii = pii or Pseudonymiser()
-    started = time.monotonic()
     req = Request(prompt.text, pii.mask(user_content), max_tokens, effort, schema)
-    try:
-        with span("llm", kind=kind, prompt_version=prompt.version, provider=provider()):
-            reply = _call(req)
-    except SDK_ERRORS as exc:
-        raise LlmError(f"AI request failed: {exc}") from exc
-    except TypeError as exc:  # the Anthropic SDK found no credentials at all
-        raise LlmError(NOT_CONFIGURED) from exc
-    text = pii.unmask(reply.text)
-    _log(kind=kind, prompt=prompt, reply=reply, started=started, case_id=case_id,
-         user_id=user_id, source_ids=source_ids or [], output=text)  # fmt: skip
-    if not text.strip():  # e.g. a reasoning model spent the whole budget thinking
-        raise LlmError("The AI returned no text; try again or raise max_tokens.")
-    if schema is None:
-        return LlmResult(text=text)
-    try:
-        return LlmResult(text=text, data=json.loads(text))
-    except json.JSONDecodeError as exc:  # e.g. cut off at max_tokens by a reasoning model
-        raise LlmError("The AI response was incomplete; try again or raise max_tokens.") from exc
+    problem = ""
+    for _attempt in range(ATTEMPTS):
+        started = time.monotonic()
+        try:
+            with span("llm", kind=kind, prompt_version=prompt.version, provider=provider()):
+                reply = _call(req)
+        except SDK_ERRORS as exc:
+            raise LlmError(f"AI request failed: {exc}") from exc
+        except TypeError as exc:  # the Anthropic SDK found no credentials at all
+            raise LlmError(NOT_CONFIGURED) from exc
+        text = pii.unmask(reply.text)
+        _log(kind=kind, prompt=prompt, reply=reply, started=started, case_id=case_id,
+             user_id=user_id, source_ids=source_ids or [], output=text)  # fmt: skip
+        if not text.strip():
+            problem = "The AI returned no text; try again or raise max_tokens."
+            continue
+        if schema is None:
+            return LlmResult(text=text)
+        try:
+            return LlmResult(text=text, data=json.loads(text))
+        except json.JSONDecodeError:  # e.g. cut off at max_tokens
+            problem = "The AI response was incomplete; try again or raise max_tokens."
+    raise LlmError(problem)
 
 
 def stream(*, kind: str, prompt: Prompt, user_content: str, case_id: uuid.UUID | None = None,

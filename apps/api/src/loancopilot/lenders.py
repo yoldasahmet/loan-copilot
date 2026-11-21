@@ -139,7 +139,7 @@ def _add_summaries(db: Session, case: Case, profile: str, items: list[dict], hit
     result = llm.complete(
         kind="lender_reasons", prompt=llm.load_prompt("lender_reasons"), user_content=content,
         case_id=case.id, source_ids=[str(h.chunk_id) for h in hits], schema=SUMMARY_SCHEMA,
-        pii=case_pseudonymiser(db, case.id), max_tokens=3000,
+        pii=case_pseudonymiser(db, case.id), max_tokens=6000,
     )  # fmt: skip
     by_name = {s["lender"].lower(): s["summary"] for s in result.data["summaries"]}
     for item in items:

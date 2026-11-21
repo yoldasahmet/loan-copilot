@@ -68,6 +68,7 @@ def test_missing_key_gives_a_clear_error(settings, monkeypatch) -> None:  # noqa
 
 def test_truncated_json_is_an_llm_error(fake_llm) -> None:  # noqa: ANN001
     fake_llm.queue('{"unit": "EUR", "fields": {"reven')
+    fake_llm.queue('{"still": "trunc')
     with pytest.raises(LlmError, match="incomplete"):
         llm.complete(kind="extraction", prompt=llm.load_prompt("extraction"), user_content="x",
                      schema={"type": "object", "properties": {}})  # fmt: skip
@@ -75,5 +76,21 @@ def test_truncated_json_is_an_llm_error(fake_llm) -> None:  # noqa: ANN001
 
 def test_empty_reply_is_an_llm_error(fake_llm) -> None:  # noqa: ANN001
     fake_llm.queue("")
+    fake_llm.queue("")
     with pytest.raises(LlmError, match="no text"):
         llm.complete(kind="memo", prompt=llm.load_prompt("memo"), user_content="x")
+
+
+def test_one_retry_recovers_from_an_empty_reply(fake_llm) -> None:  # noqa: ANN001
+    from sqlalchemy import func, select
+
+    from loancopilot.db import SessionLocal
+    from loancopilot.models import AiRun
+
+    fake_llm.queue("")
+    fake_llm.queue('{"ok": true}')
+    result = llm.complete(kind="memo", prompt=llm.load_prompt("memo"), user_content="x",
+                          schema={"type": "object", "properties": {}})  # fmt: skip
+    assert result.data == {"ok": True}
+    with SessionLocal() as db:
+        assert db.scalar(select(func.count()).select_from(AiRun)) == 2  # both attempts logged
