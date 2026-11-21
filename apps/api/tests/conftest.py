@@ -113,4 +113,5 @@ def fake_llm(monkeypatch: pytest.MonkeyPatch):  # noqa: ANN201
 
     fake = FakeLlm()
     monkeypatch.setattr(llm, "_call", fake.call)
+    monkeypatch.setattr(llm, "_stream_call", fake.stream_call)
     return fake

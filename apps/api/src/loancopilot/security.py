@@ -1,8 +1,13 @@
 """Upload checks and pseudonymisation of personal data before LLM calls."""
 
 import re
+import uuid
 from collections.abc import Iterable, Iterator
 from pathlib import PurePath
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 MIME = {"pdf": "application/pdf", "xml": "application/xml", "csv": "text/csv"}
@@ -113,3 +118,22 @@ class Pseudonymiser:
                 yield self.unmask(ready)
         if buffer:
             yield self.unmask(buffer)
+
+
+def case_pseudonymiser(db: "Session", case_id: uuid.UUID) -> Pseudonymiser:
+    """Company, contact person and the 20 largest counterparties of a case."""
+    from sqlalchemy import func, select
+
+    from loancopilot.models import Case, Company, Transaction
+
+    case = db.get_one(Case, case_id)
+    company = db.get_one(Company, case.company_id)
+    volume = func.sum(func.abs(Transaction.amount))
+    top = db.scalars(
+        select(Transaction.counterparty_name)
+        .where(Transaction.case_id == case_id, Transaction.counterparty_name.is_not(None))
+        .group_by(Transaction.counterparty_name)
+        .order_by(volume.desc())
+        .limit(20)
+    )
+    return Pseudonymiser(company.name, [company.contact_name or ""], list(top))

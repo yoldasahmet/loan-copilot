@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal, Trash2 } from "lucide-react";
+import { MessageSquareText, MoreHorizontal, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -24,7 +24,13 @@ import {
 import { api, type Case } from "@/lib/api";
 import { LEGAL_FORMS, moneyCompact, PURPOSES } from "@/lib/format";
 
-export function CaseHeader({ c }: { c: Case }) {
+export function CaseHeader({
+  c,
+  onOpenChat,
+}: {
+  c: Case;
+  onOpenChat: () => void;
+}) {
   const router = useRouter();
   const [confirm, setConfirm] = useState(false);
 
@@ -52,21 +58,26 @@ export function CaseHeader({ c }: { c: Case }) {
           · Advisor {c.advisor?.name ?? "unassigned"}
         </p>
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" aria-label="Case actions">
-            <MoreHorizontal />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={() => setConfirm(true)}
-          >
-            <Trash2 /> Delete case and data
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" onClick={onOpenChat}>
+          <MessageSquareText /> Ask the documents
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" aria-label="Case actions">
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => setConfirm(true)}
+            >
+              <Trash2 /> Delete case and data
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <Dialog open={confirm} onOpenChange={setConfirm}>
         <DialogContent>
           <DialogHeader>

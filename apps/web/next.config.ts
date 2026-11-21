@@ -19,7 +19,8 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   compress: false, // keeps SSE chat streams unbuffered through the /api proxy
   // Uploads are up to 20 MB; the API rejects anything larger with a clear message.
-  experimental: { proxyClientMaxBodySize: "21mb" },
+  // Long uploads and streamed chat answers can outlast the default 30 s proxy timeout.
+  experimental: { proxyClientMaxBodySize: "21mb", proxyTimeout: 300_000 },
   turbopack: {
     rules: {
       "*.css": { loaders: ["@tailwindcss/turbopack"], as: "*.css" },

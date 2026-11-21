@@ -7,6 +7,7 @@ import { CaseHeader } from "@/components/case/case-header";
 import { DocumentsTab } from "@/components/case/documents-tab";
 import { NaturalPersonBanner } from "@/components/case/natural-person-banner";
 import { OverviewTab } from "@/components/case/overview-tab";
+import { ChatSheet } from "@/components/chat/chat-sheet";
 import { ErrorState } from "@/components/states";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,6 +25,13 @@ function CasePage() {
   const router = useRouter();
   const search = useSearchParams();
   const tab = search.get("tab") ?? "overview";
+  const chatOpen = search.get("chat") === "1";
+  const setChat = (open: boolean) => {
+    const params = new URLSearchParams(search);
+    if (open) params.set("chat", "1");
+    else params.delete("chat");
+    router.replace(`/cases/${id}?${params}`, { scroll: false });
+  };
   const { data: c, error, reload } = useApi<Case>(`/cases/${id}`);
 
   if (error) return <ErrorState error={error} onRetry={reload} />;
@@ -38,7 +46,7 @@ function CasePage() {
 
   return (
     <div data-ready="true" className="mx-auto max-w-6xl space-y-6">
-      <CaseHeader c={c} />
+      <CaseHeader c={c} onOpenChat={() => setChat(true)} />
       {(c.company.legal_form === "eenmanszaak" ||
         c.company.legal_form === "vof") && <NaturalPersonBanner />}
       <Tabs
@@ -64,6 +72,7 @@ function CasePage() {
           <AnalysisTab caseId={c.id} />
         </TabsContent>
       </Tabs>
+      <ChatSheet caseId={c.id} open={chatOpen} onOpenChange={setChat} />
     </div>
   );
 }

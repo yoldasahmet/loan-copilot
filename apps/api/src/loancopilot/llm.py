@@ -266,11 +266,18 @@ def stream(*, kind: str, prompt: Prompt, user_content: str, case_id: uuid.UUID |
            user_id: uuid.UUID | None = None, source_ids: list[str] | None = None,
            pii: Pseudonymiser | None = None, max_tokens: int = 16000,
            effort: str = "low") -> Iterator[str]:  # fmt: skip
-    """Stream text deltas with placeholders restored; logs the run when the stream ends."""
+    """Stream text deltas with placeholders restored; logs the run when the stream ends.
+    The rate limit is checked now, before the first chunk is requested."""
     check_rate_limit(user_id)
     pii = pii or Pseudonymiser()
-    started = time.monotonic()
     req = Request(prompt.text, pii.mask(user_content), max_tokens, effort, None)
+    log_args = {"kind": kind, "prompt": prompt, "case_id": case_id, "user_id": user_id,
+                "source_ids": source_ids or []}  # fmt: skip
+    return _stream_and_log(req, pii, log_args)
+
+
+def _stream_and_log(req: Request, pii: Pseudonymiser, log_args: dict[str, Any]) -> Iterator[str]:
+    started = time.monotonic()
     final: list[Reply] = []
 
     def texts() -> Iterator[str]:
@@ -287,8 +294,7 @@ def stream(*, kind: str, prompt: Prompt, user_content: str, case_id: uuid.UUID |
     except TypeError as exc:
         raise LlmError(NOT_CONFIGURED) from exc
     reply = final[0]
-    _log(kind=kind, prompt=prompt, reply=reply, started=started, case_id=case_id,
-         user_id=user_id, source_ids=source_ids or [], output=pii.unmask(reply.text))  # fmt: skip
+    _log(**log_args, reply=reply, started=started, output=pii.unmask(reply.text))
 
 
 def strict_schema(schema: dict) -> dict:

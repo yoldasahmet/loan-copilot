@@ -191,3 +191,58 @@ export type AnalysisData = {
   red_flags: RedFlag[];
   missing_documents: MissingDocument[];
 };
+
+export type SourceRef = {
+  id: string;
+  chunk_id: string;
+  document_id: string | null;
+  filename: string | null;
+  section: string | null;
+  page_from: number | null;
+  page_to: number | null;
+  text: string;
+};
+
+export type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  sources: SourceRef[];
+  created_at: string;
+};
+
+/** POST and read a server-sent event stream, calling onEvent for each event. */
+export async function postEventStream(
+  path: string,
+  body: unknown,
+  onEvent: (event: string, data: unknown) => void,
+): Promise<void> {
+  const response = await fetch(`/api${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok || !response.body) {
+    const detail = await response
+      .json()
+      .catch(() => ({ detail: response.statusText }));
+    throw new ApiError(response.status, detail.detail ?? response.statusText);
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let end = buffer.indexOf("\n\n");
+    while (end !== -1) {
+      const block = buffer.slice(0, end);
+      buffer = buffer.slice(end + 2);
+      const event = /^event: (.*)$/m.exec(block)?.[1] ?? "message";
+      const data = /^data: (.*)$/m.exec(block)?.[1];
+      if (data !== undefined) onEvent(event, JSON.parse(data));
+      end = buffer.indexOf("\n\n");
+    }
+  }
+}
