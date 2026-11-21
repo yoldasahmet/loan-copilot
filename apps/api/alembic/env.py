@@ -4,12 +4,13 @@ from sqlalchemy import create_engine, pool
 
 from alembic import context
 from loancopilot.config import get_settings
+from loancopilot.models import Base
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:

@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -23,6 +24,12 @@ class Settings(BaseSettings):
     assumed_interest_rate: float = 0.08
     rate_limit_per_minute: int = 30
     phoenix_collector_endpoint: str = ""
+
+    @field_validator("data_dir")
+    @classmethod
+    def _resolve_data_dir(cls, value: Path) -> Path:
+        # Relative paths in .env are relative to the repo root, not the process cwd.
+        return value if value.is_absolute() else (REPO_ROOT / value).resolve()
 
 
 @lru_cache

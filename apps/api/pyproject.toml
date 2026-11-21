@@ -5,10 +5,13 @@ description = "SME Loan Copilot API"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.20.1",
+    "argon2-cffi>=25.1.0",
     "fastapi>=0.165.0",
+    "itsdangerous>=2.2.0",
     "pgvector>=0.5.1",
     "psycopg[binary]>=3.3.9",
     "pydantic-settings>=2.16.3",
+    "python-multipart>=0.0.34",
     "sqlalchemy>=2.1.9",
     "uvicorn[standard]>=0.54.0",
 ]
@@ -33,3 +36,6 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff.lint.per-file-ignores]
+"alembic/versions/*" = ["E501"]

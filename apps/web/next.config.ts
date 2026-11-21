@@ -18,6 +18,8 @@ const csp = [
 const nextConfig: NextConfig = {
   devIndicators: false,
   compress: false, // keeps SSE chat streams unbuffered through the /api proxy
+  // Uploads are up to 20 MB; the API rejects anything larger with a clear message.
+  experimental: { proxyClientMaxBodySize: "21mb" },
   turbopack: {
     rules: {
       "*.css": { loaders: ["@tailwindcss/turbopack"], as: "*.css" },
