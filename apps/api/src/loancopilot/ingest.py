@@ -14,7 +14,7 @@ from loancopilot.embeddings import embed, model_name
 from loancopilot.ingest_pdf import ParseError, parse_pdf
 from loancopilot.ingest_statements import StatementError, parse_camt053, parse_csv
 from loancopilot.models import Case, Chunk, Company, Document, Lender, Transaction
-from loancopilot.security import MIME
+from loancopilot.security import MIME, injection_matches
 
 log = logging.getLogger(__name__)
 
@@ -49,6 +49,10 @@ def _ingest_pdf(db: Session, doc: Document) -> None:
     drafts = chunk_blocks(parsed.blocks)
     headers = [context_header(company or lender, label, d.section) for d in drafts]
     vectors = embed([f"{h}\n{d.text}" for h, d in zip(headers, drafts, strict=True)])
+    # Flag text that looks like instructions to an AI; flagged chunks stay out of LLM context
+    # until an advisor allows the document (the filter is in retrieval's SQL).
+    doc.injection_flag = any(injection_matches(d.text) for d in drafts)
+    doc.injection_allowed = False
     db.execute(delete(Chunk).where(Chunk.document_id == doc.id))
     for draft, header, vector in zip(drafts, headers, vectors, strict=True):
         db.add(Chunk(

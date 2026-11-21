@@ -60,3 +60,29 @@ def test_only_admin_can_reassign(login) -> None:
     assert admin.patch(f"/api/cases/{case_id}", json={"advisor_id": b_id}).status_code == 200
     assert b.get(f"/api/cases/{case_id}").status_code == 200
     assert a.get(f"/api/cases/{case_id}").status_code == 404
+
+
+CASE_ENDPOINTS = [
+    ("get", ""), ("patch", ""), ("delete", ""), ("get", "/documents"),
+    ("post", "/documents"), ("get", "/analysis"), ("post", "/analysis/run"),
+    ("patch", "/financials/2025"), ("get", "/similar"), ("get", "/lenders"), ("get", "/chat"),
+    ("post", "/chat"), ("post", "/prepare"), ("get", "/prepare"), ("get", "/memo"),
+    ("post", "/memo/approve"), ("post", "/memo/request-changes"),
+]  # fmt: skip
+BODIES = {"/financials/2025": {"values": {"revenue": 1}}, "/chat": {"message": "hi"},
+          "/memo/request-changes": {"note": "shorter"}, "": {"notes": "x"}}  # fmt: skip
+
+
+def test_every_case_endpoint_is_404_for_another_advisor(login) -> None:
+    a, b = login("advisor"), login("advisor")
+    case_id = new_case(a)["id"]
+    for method, suffix in CASE_ENDPOINTS:
+        url = f"/api/cases/{case_id}{suffix}"
+        if suffix == "/documents" and method == "post":
+            response = b.post(url, files={"file": ("x.pdf", MINIMAL_PDF)})
+        elif method in ("post", "patch"):
+            response = getattr(b, method)(url, json=BODIES.get(suffix, {}))
+        else:
+            response = getattr(b, method)(url)
+        assert response.status_code == 404, (method, suffix, response.status_code)
+    assert a.get(f"/api/cases/{case_id}").status_code == 200  # still there for its owner

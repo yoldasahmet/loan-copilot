@@ -137,3 +137,29 @@ def case_pseudonymiser(db: "Session", case_id: uuid.UUID) -> Pseudonymiser:
         .limit(20)
     )
     return Pseudonymiser(company.name, [company.contact_name or ""], list(top))
+
+
+# ---------------------------------------------------------------- prompt-injection scan
+
+INJECTION_PATTERNS = [
+    r"ignore (?:all |any )?(?:the )?(?:previous|prior|above|earlier) instructions",
+    r"disregard (?:all |any )?(?:the )?(?:previous|prior|above) (?:instructions|rules)",
+    r"system prompt",
+    r"you are now",
+    r"act as (?:an? )?(?:ai|assistant|credit committee)",
+    r"new instructions?:",
+    r"do not (?:tell|mention|reveal)",
+    r"recommend (?:the )?approval",
+    r"<\s*/?\s*(?:system|instructions?)\s*>",
+]
+_INJECTION = [re.compile(p, re.IGNORECASE) for p in INJECTION_PATTERNS]
+
+
+def injection_matches(text: str) -> list[str]:
+    """Phrases that look like instructions to an AI (the document is flagged, not altered)."""
+    found = []
+    for pattern in _INJECTION:
+        match = pattern.search(text)
+        if match:
+            found.append(match.group(0))
+    return found
