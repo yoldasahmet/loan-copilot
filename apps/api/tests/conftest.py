@@ -53,6 +53,9 @@ PASSWORD = "correct-horse-battery"
 @pytest.fixture(scope="session", autouse=True)
 def migrated() -> None:
     command.upgrade(Config(str(Path(__file__).parents[1] / "alembic.ini")), "head")
+    from loancopilot.agent import ensure_checkpointer
+
+    ensure_checkpointer()
 
 
 @pytest.fixture(autouse=True)

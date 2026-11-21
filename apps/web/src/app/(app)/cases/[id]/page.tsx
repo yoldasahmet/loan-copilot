@@ -10,6 +10,8 @@ import { OverviewTab } from "@/components/case/overview-tab";
 import { ChatSheet } from "@/components/chat/chat-sheet";
 import { LendersTab } from "@/components/matching/lenders-tab";
 import { SimilarTab } from "@/components/matching/similar-tab";
+import { MemoTab } from "@/components/memo/memo-tab";
+import { PreparePanel } from "@/components/prepare/prepare-panel";
 import { ErrorState } from "@/components/states";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,6 +24,7 @@ const TABS = {
   analysis: "Analysis",
   similar: "Similar cases",
   lenders: "Lenders",
+  memo: "Memo",
 } as const;
 
 function CasePage() {
@@ -53,6 +56,7 @@ function CasePage() {
       <CaseHeader c={c} onOpenChat={() => setChat(true)} />
       {(c.company.legal_form === "eenmanszaak" ||
         c.company.legal_form === "vof") && <NaturalPersonBanner />}
+      <PreparePanel caseId={c.id} onChange={reload} />
       <Tabs
         value={tab}
         onValueChange={(t) =>
@@ -80,6 +84,9 @@ function CasePage() {
         </TabsContent>
         <TabsContent value="lenders" className="pt-4">
           <LendersTab caseId={c.id} />
+        </TabsContent>
+        <TabsContent value="memo" className="pt-4">
+          <MemoTab caseId={c.id} onReviewed={reload} />
         </TabsContent>
       </Tabs>
       <ChatSheet caseId={c.id} open={chatOpen} onOpenChange={setChat} />

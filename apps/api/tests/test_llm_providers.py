@@ -54,6 +54,9 @@ def test_request_shapes(settings, monkeypatch) -> None:  # noqa: ANN001
     assert o["max_completion_tokens"] == 1000
     assert o["response_format"]["json_schema"]["strict"] is True
     assert "response_format" not in llm.openai_kwargs(Request("s", "u", 10, "low", None), "openai")
+    assert "extra_body" not in o
+    monkeypatch.setattr(settings, "llm_model", "vendor/model")
+    assert llm.openai_kwargs(REQ, "openrouter")["extra_body"] == {"reasoning": {"effort": "medium"}}
 
 
 def test_missing_key_gives_a_clear_error(settings, monkeypatch) -> None:  # noqa: ANN001
@@ -68,3 +71,9 @@ def test_truncated_json_is_an_llm_error(fake_llm) -> None:  # noqa: ANN001
     with pytest.raises(LlmError, match="incomplete"):
         llm.complete(kind="extraction", prompt=llm.load_prompt("extraction"), user_content="x",
                      schema={"type": "object", "properties": {}})  # fmt: skip
+
+
+def test_empty_reply_is_an_llm_error(fake_llm) -> None:  # noqa: ANN001
+    fake_llm.queue("")
+    with pytest.raises(LlmError, match="no text"):
+        llm.complete(kind="memo", prompt=llm.load_prompt("memo"), user_content="x")

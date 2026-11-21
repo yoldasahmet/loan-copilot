@@ -3,6 +3,7 @@
 import { ShieldX } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { AuditTab } from "@/components/admin/audit-tab";
 import { HistoryTab } from "@/components/admin/history-tab";
 import { LendersTab } from "@/components/admin/lenders-tab";
 import { UsersTab } from "@/components/admin/users-tab";
@@ -61,6 +62,9 @@ function AdminPage() {
         </TabsContent>
         <TabsContent value="history" className="pt-4">
           <HistoryTab />
+        </TabsContent>
+        <TabsContent value="audit" className="pt-4">
+          <AuditTab />
         </TabsContent>
       </Tabs>
     </div>

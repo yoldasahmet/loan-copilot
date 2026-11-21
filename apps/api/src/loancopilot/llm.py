@@ -20,6 +20,7 @@ from loancopilot.config import get_settings
 from loancopilot.db import SessionLocal
 from loancopilot.models import AiRun
 from loancopilot.security import Pseudonymiser
+from loancopilot.tracing import span
 
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 # Server-side fallback: if the model declines, the API re-runs the request on a
@@ -166,6 +167,8 @@ def openai_kwargs(req: Request, name: str) -> dict[str, Any]:
             {"role": "user", "content": req.user},
         ],  # fmt: skip
     }
+    if name == "openrouter":  # reasoning models: cap thinking with the same effort level
+        kwargs["extra_body"] = {"reasoning": {"effort": req.effort}}
     if req.schema is not None:
         kwargs["response_format"] = {
             "type": "json_schema",
@@ -251,7 +254,8 @@ def complete(*, kind: str, prompt: Prompt, user_content: str, case_id: uuid.UUID
     started = time.monotonic()
     req = Request(prompt.text, pii.mask(user_content), max_tokens, effort, schema)
     try:
-        reply = _call(req)
+        with span("llm", kind=kind, prompt_version=prompt.version, provider=provider()):
+            reply = _call(req)
     except SDK_ERRORS as exc:
         raise LlmError(f"AI request failed: {exc}") from exc
     except TypeError as exc:  # the Anthropic SDK found no credentials at all
@@ -259,6 +263,8 @@ def complete(*, kind: str, prompt: Prompt, user_content: str, case_id: uuid.UUID
     text = pii.unmask(reply.text)
     _log(kind=kind, prompt=prompt, reply=reply, started=started, case_id=case_id,
          user_id=user_id, source_ids=source_ids or [], output=text)  # fmt: skip
+    if not text.strip():  # e.g. a reasoning model spent the whole budget thinking
+        raise LlmError("The AI returned no text; try again or raise max_tokens.")
     if schema is None:
         return LlmResult(text=text)
     try:

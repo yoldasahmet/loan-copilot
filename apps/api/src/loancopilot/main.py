@@ -4,9 +4,18 @@ from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
 
-from loancopilot import embeddings, rerank
+from loancopilot import agent, embeddings, rerank
 from loancopilot.config import get_settings
-from loancopilot.routes import admin, analysis, auth, cases, chat, documents, matching
+from loancopilot.routes import (
+    admin,
+    analysis,
+    auth,
+    cases,
+    chat,
+    documents,
+    matching,
+    prepare,
+)
 
 
 def _warm_models() -> None:
@@ -18,6 +27,7 @@ def _warm_models() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    agent.ensure_checkpointer()
     if get_settings().embeddings_backend != "fake":
         threading.Thread(target=_warm_models, daemon=True).start()
     yield
@@ -40,7 +50,7 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-for module in (auth, cases, documents, analysis, chat, matching, admin):
+for module in (auth, cases, documents, analysis, chat, matching, prepare, admin):
     api.include_router(module.router)
 
 app.include_router(api)

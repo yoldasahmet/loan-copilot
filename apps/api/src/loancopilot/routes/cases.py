@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select, update
 
+from loancopilot import agent
 from loancopilot.auth import DB, CurrentUser, allowed_case_ids, get_case
 from loancopilot.config import get_settings
 from loancopilot.models import AiRun, Case, Company, Memo, User
@@ -194,6 +195,7 @@ def update_case(case_id: uuid.UUID, body: CaseUpdate, db: DB, user: CurrentUser)
 def delete_case(case_id: uuid.UUID, db: DB, user: CurrentUser) -> None:
     """Right to erasure: files and every case-linked row go; ai_runs keep metadata only."""
     case = get_case(db, user, case_id)
+    agent.delete_checkpoints(db, case.id)
     db.execute(update(AiRun).where(AiRun.case_id == case.id).values(output_text=None))
     company = db.get_one(Company, case.company_id)
     db.delete(company)  # cascades to the case and every table that references it

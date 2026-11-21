@@ -11,7 +11,7 @@ from sqlalchemy import select
 from loancopilot.auth import DB, AdminUser, CurrentUser, hash_password
 from loancopilot.history import import_jsonl
 from loancopilot.ingest import ingest_document
-from loancopilot.models import Document, Lender, User
+from loancopilot.models import AiRun, Case, Chunk, Company, Document, Lender, User
 from loancopilot.routes.documents import DocumentOut, store_document
 from loancopilot.schemas import UserOut
 
@@ -198,3 +198,77 @@ async def import_history(db: DB, admin: AdminUser,
     except UnicodeDecodeError as exc:
         raise HTTPException(422, "The file must be UTF-8 encoded JSONL.") from exc
     return ImportResult(**import_jsonl(db, text), finished_at=datetime.now().astimezone())
+
+
+# ---------------------------------------------------------------- audit log
+
+
+class AuditRow(BaseModel):
+    id: uuid.UUID
+    created_at: datetime
+    kind: str
+    model: str
+    prompt_version: str
+    input_tokens: int
+    output_tokens: int
+    latency_ms: int
+    cost_usd: float
+    case_id: uuid.UUID | None
+    case_label: str | None
+    user: str | None
+    source_count: int
+
+
+class AuditDetail(AuditRow):
+    output_text: str | None
+    sources: list[dict]
+
+
+def _audit_row(run: AiRun, case_labels: dict, users: dict) -> dict:
+    return {
+        "id": run.id, "created_at": run.created_at, "kind": run.kind, "model": run.model,
+        "prompt_version": run.prompt_version, "input_tokens": run.input_tokens,
+        "output_tokens": run.output_tokens, "latency_ms": run.latency_ms,
+        "cost_usd": float(run.cost_usd), "case_id": run.case_id,
+        "case_label": case_labels.get(run.case_id), "user": users.get(run.user_id),
+        "source_count": len(run.source_ids),
+    }  # fmt: skip
+
+
+def _labels(db: DB) -> tuple[dict, dict]:
+    case_labels = dict(db.execute(select(Case.id, Company.name)
+                                  .join(Company, Company.id == Case.company_id)).all())  # fmt: skip
+    users = dict(db.execute(select(User.id, User.name)).all())
+    return case_labels, users
+
+
+@router.get("/audit")
+def audit_log(db: DB, admin: AdminUser, kind: str | None = None, case_id: uuid.UUID | None = None,
+              limit: int = 200) -> list[AuditRow]:  # fmt: skip
+    """Every LLM call (metadata only; prompts are never stored)."""
+    query = select(AiRun).order_by(AiRun.created_at.desc()).limit(min(limit, 1000))
+    if kind:
+        query = query.where(AiRun.kind == kind)
+    if case_id:
+        query = query.where(AiRun.case_id == case_id)
+    case_labels, users = _labels(db)
+    return [AuditRow(**_audit_row(r, case_labels, users)) for r in db.scalars(query)]
+
+
+@router.get("/audit/{run_id}")
+def audit_detail(run_id: uuid.UUID, db: DB, admin: AdminUser) -> AuditDetail:
+    run = db.get(AiRun, run_id)
+    if run is None:
+        raise HTTPException(404, "Run not found")
+    chunk_ids = []
+    for source_id in run.source_ids:
+        try:
+            chunk_ids.append(uuid.UUID(str(source_id)))
+        except ValueError:
+            continue  # memo sources are S1..Sn labels, stored on the memo itself
+    chunks = db.scalars(select(Chunk).where(Chunk.id.in_(chunk_ids))) if chunk_ids else []
+    sources = [{"chunk_id": str(c.id), "section": c.section, "page_from": c.page_from,
+                "text": c.text[:1500]} for c in chunks]  # fmt: skip
+    case_labels, users = _labels(db)
+    return AuditDetail(**_audit_row(run, case_labels, users), output_text=run.output_text,
+                       sources=sources)  # fmt: skip

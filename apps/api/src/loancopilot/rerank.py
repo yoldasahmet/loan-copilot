@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from functools import lru_cache
 
 from loancopilot.config import get_settings
+from loancopilot.tracing import span
 
 
 @lru_cache
@@ -21,6 +22,7 @@ def rerank[T](query: str, items: Sequence[T], texts: Sequence[str], top_k: int) 
     """Order items by cross-encoder score of (query, text); keep top_k."""
     if not items:
         return []
-    scores = _model().predict([(query, t) for t in texts], batch_size=16)
+    with span("rerank", candidates=len(items), top_k=top_k):
+        scores = _model().predict([(query, t) for t in texts], batch_size=16)
     ranked = sorted(zip(items, scores, strict=True), key=lambda pair: -float(pair[1]))
     return [item for item, _ in ranked[:top_k]]

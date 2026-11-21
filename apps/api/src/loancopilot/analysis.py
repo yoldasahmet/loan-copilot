@@ -73,6 +73,13 @@ def _div(a: Decimal | float | None, b: Decimal | float | None) -> float | None:
     return float(a) / float(b)
 
 
+def format_ratio(value: float | None, kind: str, decimals: int = 1) -> str:
+    """38.0% for percent ratios, 1.52x for multiples."""
+    if value is None:
+        return "n/a"
+    return f"{value * 100:.{decimals}f}%" if kind == "percent" else f"{value:.2f}x"
+
+
 def status(value: float | None, threshold: float | None, higher_is_better: bool) -> str:
     """green / amber / red against a threshold; neutral when there is no threshold or value."""
     if value is None or threshold is None:
@@ -281,9 +288,8 @@ def red_flags(ratios: dict, cashflow: dict | None, company: Company, applied_on:
         if item["status"] != "red":
             continue
         threshold, value = item["threshold"], item["value"]
-        shown = "n/a" if value is None else (f"{value:.1%}" if item["kind"] == "percent"
-                                             else f"{value:.2f}x")  # fmt: skip
-        limit = f"{threshold:.0%}" if item["kind"] == "percent" else f"{threshold:.2f}x"
+        shown = format_ratio(value, item["kind"])
+        limit = format_ratio(threshold, item["kind"], decimals=0)
         side = "below" if item["higher_is_better"] else "above"
         flag(
             item["key"],
@@ -361,8 +367,7 @@ def analysis_text(company: str, ratios: dict, cashflow: dict | None, flags: list
         lines.append(f"Ratios for {ratios['year']}:")
         for item in ratios["items"]:
             value = item["value"]
-            shown = "n/a" if value is None else (f"{value:.1%}" if item["kind"] == "percent"
-                                                 else f"{value:.2f}x")  # fmt: skip
+            shown = format_ratio(value, item["kind"])
             lines.append(f"- {item['label']}: {shown} ({item['formula']}; status {item['status']})")
         lines.append(
             f"DSCR assumptions: new loan {_eur(a['loan_amount'])} over {a['term_months']} months "

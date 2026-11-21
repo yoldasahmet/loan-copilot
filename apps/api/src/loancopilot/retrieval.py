@@ -15,6 +15,7 @@ from loancopilot import rerank as reranker
 from loancopilot.auth import allowed_case_ids
 from loancopilot.embeddings import embed
 from loancopilot.models import CaseCard, Chunk, Document, User
+from loancopilot.tracing import span
 
 Mode = Literal["dense", "keyword", "hybrid"]
 CANDIDATES = 40  # per retriever
@@ -100,6 +101,12 @@ def rrf(rankings: list[list[uuid.UUID]], k: int = RRF_K) -> list[tuple[uuid.UUID
 
 def search(db: Session, query: str, scope: Scope, k: int = 6, mode: Mode = "hybrid",
            rerank: bool | None = None) -> list[Hit]:  # fmt: skip
+    with span("retrieve", scope=scope.kind, mode=mode, k=k):
+        return _search(db, query, scope, k, mode, rerank)
+
+
+def _search(db: Session, query: str, scope: Scope, k: int, mode: Mode,
+            rerank: bool | None) -> list[Hit]:  # fmt: skip
     rankings = []
     if mode in ("dense", "hybrid"):
         rankings.append(dense_ids(db, query, scope))

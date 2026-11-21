@@ -321,3 +321,70 @@ export type Lender = {
   active: boolean;
   documents: Doc[];
 };
+
+export type PrepareStep = {
+  name: string;
+  label: string;
+  status: "pending" | "running" | "done" | "failed" | "waiting";
+  started_at: string | null;
+  finished_at: string | null;
+  note: string | null;
+};
+
+export type PrepareRun = {
+  id: string;
+  run_number: number;
+  status: "running" | "waiting_review" | "done" | "failed";
+  steps: PrepareStep[];
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MemoSource = SourceRef & { type: string; title: string };
+
+export type Memo = {
+  id: string;
+  version: number;
+  content_md: string;
+  sources: MemoSource[];
+  verification: {
+    total?: number;
+    verified?: number;
+    unverified?: string[];
+    attempts?: { unverified: string[]; total: number }[];
+    missing_sections?: string[];
+  };
+  status: "draft" | "approved" | "changes_requested";
+  review_note: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  created_at: string;
+  versions: { version: number; status: string; created_at: string }[];
+};
+
+export type AuditRow = {
+  id: string;
+  created_at: string;
+  kind: string;
+  model: string;
+  prompt_version: string;
+  input_tokens: number;
+  output_tokens: number;
+  latency_ms: number;
+  cost_usd: number;
+  case_id: string | null;
+  case_label: string | null;
+  user: string | null;
+  source_count: number;
+};
+
+export type AuditDetail = AuditRow & {
+  output_text: string | null;
+  sources: {
+    chunk_id: string;
+    section: string | null;
+    page_from: number | null;
+    text: string;
+  }[];
+};
