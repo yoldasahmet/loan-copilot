@@ -44,6 +44,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]  # the eval package (apps/api/eval)
 
 [tool.ruff.lint.per-file-ignores]
 "alembic/versions/*" = ["E501"]

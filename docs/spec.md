@@ -78,7 +78,7 @@ README version (use this wording or close to it):
 | Reranker | `BAAI/bge-reranker-v2-m3` via sentence-transformers `CrossEncoder` | Model name in env |
 | LLM | Anthropic Claude, OpenAI or OpenRouter (official Anthropic and OpenAI Python SDKs) | Provider in `LLM_PROVIDER` (`auto` picks the first key that is set), model in `LLM_MODEL`; every call goes through `llm.py` |
 | Agent | LangGraph with the Postgres checkpointer | |
-| Evaluation | Own metric code + RAGAS (faithfulness, answer relevancy) | |
+| Evaluation | Own metric code; faithfulness and answer relevancy follow the RAGAS definitions | The judge calls go through `llm.py` (pseudonymised, logged as `eval_judge`) instead of the `ragas` package |
 | Tracing | OpenTelemetry → Arize Phoenix (optional Compose profile `tracing`) | Off when `PHOENIX_COLLECTOR_ENDPOINT` is unset |
 | Web | Next.js (App Router), TypeScript, Tailwind, shadcn/ui (including charts), pnpm, Biome | `apps/web` |
 | Quality | ruff + pytest (API); Biome + `tsc --noEmit` + `next build` (web) | |
@@ -545,10 +545,10 @@ local/
 
 ## 15. Evaluation
 
-The eval code is public in `apps/api/eval/`, but the data comes from `EVAL_DIR` (`make eval EVAL_DIR=local/eval`). It runs against the local database loaded by `make -C local load`. It writes `docs/eval-results.md` (tables, config, date, model names) and raw JSON to `eval/results/` (gitignored). **CI never runs the eval** because there is no data in CI.
+The eval code is public in `apps/api/eval/`, but the data comes from `EVAL_DIR` (`make eval EVAL_DIR=local/eval`). It runs against the local database loaded by `make -C local load`. It writes `docs/eval-results.md` (tables, config, date, model names) and raw JSON to `eval/results/` (gitignored). **CI never runs the eval** because there is no data in CI. Without a working LLM the eval still runs retrieval, the backtest and memo verification, and marks the answer and extraction parts as not run.
 
 1. **Retrieval:** recall@5 and MRR@10 on the golden questions for 4 configurations: `dense`, `keyword`, `hybrid`, `hybrid + rerank`.
-2. **Answers** (hybrid + rerank): RAGAS faithfulness and answer relevancy, plus the rate of correct "can't find" replies on the unanswerable questions.
+2. **Answers** (hybrid + rerank): faithfulness and answer relevancy as RAGAS defines them (computed in `apps/api/eval/`, judged through `llm.py`), plus the rate of correct "can't find" replies on the unanswerable questions.
 3. **Extraction:** field-level accuracy (within 0.5%) on the 20 extraction PDFs, and the share of reports that raised validation warnings.
 4. **Backtest:**
    - Hold out the historical cases that applied in the last 12 months. For each one, only cases decided before its application date are searchable.
