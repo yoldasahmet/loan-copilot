@@ -78,3 +78,29 @@ def login() -> Callable[..., TestClient]:
         return c
 
     return _login
+
+
+FAKE_PDF_BLOCKS = [
+    ("header", "Testbouw B.V.", 1),
+    ("text", "Annual report 2025", 1),
+    ("header", "Directors' report", 2),
+    ("text", " ".join(["Revenue rose because of heat-pump projects."] * 40), 2),
+    ("header", "Balance sheet as at 31 December 2025", 3),
+    ("header", "Amounts in EUR", 3),
+    ("table", "| | 2025 |\n|---|---|\n| Total assets | 2,000,000 |", 3),
+]
+
+
+@pytest.fixture(autouse=True)
+def fake_docling(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Docling needs large layout models; API tests use a fixed parse result instead.
+
+    The chunker itself is tested directly in test_chunking.py.
+    """
+    from loancopilot import ingest
+    from loancopilot.ingest_pdf import Block, ParsedPdf
+
+    def parse(_path: Path) -> ParsedPdf:
+        return ParsedPdf([Block(k, t, p) for k, t, p in FAKE_PDF_BLOCKS], page_count=3)
+
+    monkeypatch.setattr(ingest, "parse_pdf", parse)

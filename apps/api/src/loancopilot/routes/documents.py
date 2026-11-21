@@ -5,13 +5,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import or_, select
 
 from loancopilot.auth import DB, CurrentUser, allowed_case_ids, get_case
-from loancopilot.config import get_settings
+from loancopilot.ingest import file_path, ingest_document
 from loancopilot.models import Document
 from loancopilot.security import MIME, UploadRejected, check_upload
 
@@ -36,12 +36,6 @@ class DocumentOut(BaseModel):
     injection_flag: bool
     injection_allowed: bool
     created_at: datetime
-
-
-def file_path(doc: Document) -> Path:
-    owner = str(doc.case_id) if doc.case_id else f"lenders/{doc.lender_id}"
-    ext = next(e for e, m in MIME.items() if m == doc.mime)
-    return get_settings().data_dir / "files" / owner / f"{doc.sha256}.{ext}"
 
 
 def store_document(db: DB, *, upload_name: str, data: bytes, kind: str, year: int | None,
@@ -86,6 +80,7 @@ async def upload_document(
     case_id: uuid.UUID,
     db: DB,
     user: CurrentUser,
+    background: BackgroundTasks,
     file: Annotated[UploadFile, File()],
     kind: Annotated[Kind | None, Form()] = None,
     year: Annotated[int | None, Form()] = None,
@@ -95,8 +90,10 @@ async def upload_document(
     name = Path(file.filename or "upload").name
     if kind is None:
         kind = "annual_report" if name.lower().endswith(".pdf") else "bank_statement"
-    doc, _ = store_document(db, upload_name=name, data=data, kind=kind, year=year,
-                            case_id=case.id)  # fmt: skip
+    doc, created = store_document(db, upload_name=name, data=data, kind=kind, year=year,
+                                  case_id=case.id)  # fmt: skip
+    if created:
+        background.add_task(ingest_document, doc.id)
     return DocumentOut.model_validate(doc)
 
 
