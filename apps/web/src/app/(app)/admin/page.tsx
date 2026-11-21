@@ -15,6 +15,7 @@ const TABS = {
   users: "Users",
   lenders: "Lenders",
   history: "History import",
+  audit: "Audit log",
 } as const;
 
 function AdminPage() {

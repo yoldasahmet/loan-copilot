@@ -109,3 +109,16 @@ def test_deleting_a_case_erases_memos_checkpoints_and_ai_output(login, fake_llm)
         left = db.execute(text("SELECT count(*) FROM checkpoints WHERE thread_id LIKE :t"),
                           {"t": f"{case_id}:%"}).scalar()  # fmt: skip
         assert left == 0
+
+
+def test_failed_run_is_reported_and_the_case_is_not_left_analysing(login, fake_llm) -> None:
+    a = login("advisor")
+    case_id = new_case(a)["id"]
+    add_report(case_id)
+    fake_llm.queue("")  # the memo call returns nothing twice (one retry) → the run fails
+    fake_llm.queue("")
+    a.post(f"/api/cases/{case_id}/prepare")
+    run = a.get(f"/api/cases/{case_id}/prepare").json()
+    assert run["status"] == "failed" and "no text" in run["error"]
+    assert next(s for s in run["steps"] if s["name"] == "draft_memo")["status"] == "failed"
+    assert a.get(f"/api/cases/{case_id}").json()["status"] == "intake"

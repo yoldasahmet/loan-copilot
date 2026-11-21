@@ -101,13 +101,25 @@ export function formatPercent(
   return `${(value * 100).toFixed(digits)}%`;
 }
 
-/** "2026-03" → "Mar 26" */
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+/** "2026-03" → "Mar 26" (fixed labels: en-GB would print "Sept") */
 export function monthLabel(key: string): string {
   const [y, m] = key.split("-").map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString("en-GB", {
-    month: "short",
-    year: "2-digit",
-  });
+  return `${MONTHS[m - 1]} ${String(y).slice(2)}`;
 }
 
 export const FIGURE_LABELS: Record<string, string> = {

@@ -82,7 +82,7 @@ export function PreparePanel({
                 : run?.status === "done"
                   ? "Completed. The memo was reviewed."
                   : run?.status === "failed"
-                    ? `Stopped: ${run.error ?? "unknown error"}`
+                    ? `Stopped at “${run.steps.find((step) => step.status === "failed")?.label ?? "a step"}”. Try again; hover the step for details.`
                     : active
                       ? "Working through the steps…"
                       : "Analyse documents, find precedents and lenders, and draft a cited memo."}
@@ -104,7 +104,10 @@ export function PreparePanel({
               return (
                 <li
                   key={step.name}
-                  title={step.note ?? undefined}
+                  title={
+                    (step.status === "failed" ? run.error : step.note) ??
+                    undefined
+                  }
                   className={cn(
                     "flex flex-col items-center gap-1.5 rounded-lg border px-2 py-2.5 text-center",
                     step.status === "done" && "border-success/30 bg-success/5",

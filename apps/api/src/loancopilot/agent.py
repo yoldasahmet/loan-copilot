@@ -289,6 +289,9 @@ def execute(run_id: uuid.UUID, resume: dict | None = None) -> None:
         with SessionLocal() as db:
             run = db.get_one(PrepareRun, run_id)
             run.status, run.error = "failed", str(exc)[:500]
+            case = db.get_one(Case, run.case_id)
+            if case.status == "analysing":  # the case is not stuck "analysing" after a failure
+                case.status = "intake"
             db.commit()
 
 
