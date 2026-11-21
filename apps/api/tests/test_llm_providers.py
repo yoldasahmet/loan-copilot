@@ -61,3 +61,10 @@ def test_missing_key_gives_a_clear_error(settings, monkeypatch) -> None:  # noqa
     monkeypatch.setattr(settings, "llm_model", "some-openai-model")
     with pytest.raises(LlmError, match="AI is not configured"):
         llm.complete(kind="chat", prompt=llm.load_prompt("extraction"), user_content="hi")
+
+
+def test_truncated_json_is_an_llm_error(fake_llm) -> None:  # noqa: ANN001
+    fake_llm.queue('{"unit": "EUR", "fields": {"reven')
+    with pytest.raises(LlmError, match="incomplete"):
+        llm.complete(kind="extraction", prompt=llm.load_prompt("extraction"), user_content="x",
+                     schema={"type": "object", "properties": {}})  # fmt: skip

@@ -17,6 +17,7 @@ from loancopilot.embeddings import embed, model_name
 from loancopilot.extraction import extract_report, unextracted_reports
 from loancopilot.llm import LlmError
 from loancopilot.models import Analysis, Case, Chunk, Company, Document, Financial, Transaction
+from loancopilot.similar import find_similar, precedent_document_requests
 
 THRESHOLDS: dict[str, float] = {
     "solvency_min": 0.20,
@@ -406,6 +407,7 @@ def compute(db: Session, case: Case, errors: list[str] | None = None,
     if precedent_requests is None:
         precedent_requests = [m for m in (analysis.missing_documents or []) if "share" in m]
     analysis.ratios, analysis.cashflow, analysis.red_flags = ratios, cashflow or {}, flags
+    analysis.similar = analysis.lender_matches = None  # inputs changed: recompute on next view
     analysis.missing_documents = missing_documents(case.applied_on, report_years, cashflow,
                                                    precedent_requests)  # fmt: skip
     analysis.computed_at = datetime.now(UTC)
@@ -431,6 +433,9 @@ def run_analysis(db: Session, case_id: uuid.UUID) -> Analysis:
             extract_report(db, doc)
         except LlmError as exc:
             errors.append(f"{doc.filename}: {exc}")
-    analysis = compute(db, case, errors)
+    compute(db, case, errors)
+    # Documents lenders often asked for in similar cases join the missing-documents checklist.
+    requests = precedent_document_requests(db, find_similar(db, case))
+    analysis = compute(db, case, errors, requests)
     db.commit()
     return analysis

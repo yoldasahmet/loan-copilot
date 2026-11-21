@@ -3,12 +3,18 @@
 import { ShieldX } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { HistoryTab } from "@/components/admin/history-tab";
+import { LendersTab } from "@/components/admin/lenders-tab";
 import { UsersTab } from "@/components/admin/users-tab";
 import { EmptyState } from "@/components/states";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUser } from "@/components/user-provider";
 
-const TABS = { users: "Users" } as const;
+const TABS = {
+  users: "Users",
+  lenders: "Lenders",
+  history: "History import",
+} as const;
 
 function AdminPage() {
   const router = useRouter();
@@ -49,6 +55,12 @@ function AdminPage() {
         </TabsList>
         <TabsContent value="users" className="pt-4">
           <UsersTab />
+        </TabsContent>
+        <TabsContent value="lenders" className="pt-4">
+          <LendersTab />
+        </TabsContent>
+        <TabsContent value="history" className="pt-4">
+          <HistoryTab />
         </TabsContent>
       </Tabs>
     </div>

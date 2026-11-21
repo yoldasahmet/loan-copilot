@@ -217,6 +217,9 @@ class Analysis(Base):
     cashflow: Mapped[dict[str, Any]] = mapped_column(default=dict)
     red_flags: Mapped[list[Any]] = mapped_column(default=list)
     missing_documents: Mapped[list[Any]] = mapped_column(default=list)
+    # Cached results for the Similar cases and Lenders tabs; cleared when the analysis reruns.
+    similar: Mapped[list[Any] | None] = mapped_column(JSONB)
+    lender_matches: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     computed_at: Mapped[datetime] = _created()
 
 

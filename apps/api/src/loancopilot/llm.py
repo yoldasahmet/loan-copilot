@@ -259,7 +259,12 @@ def complete(*, kind: str, prompt: Prompt, user_content: str, case_id: uuid.UUID
     text = pii.unmask(reply.text)
     _log(kind=kind, prompt=prompt, reply=reply, started=started, case_id=case_id,
          user_id=user_id, source_ids=source_ids or [], output=text)  # fmt: skip
-    return LlmResult(text=text, data=json.loads(text) if schema is not None else None)
+    if schema is None:
+        return LlmResult(text=text)
+    try:
+        return LlmResult(text=text, data=json.loads(text))
+    except json.JSONDecodeError as exc:  # e.g. cut off at max_tokens by a reasoning model
+        raise LlmError("The AI response was incomplete; try again or raise max_tokens.") from exc
 
 
 def stream(*, kind: str, prompt: Prompt, user_content: str, case_id: uuid.UUID | None = None,

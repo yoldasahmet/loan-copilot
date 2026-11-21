@@ -6,7 +6,7 @@ from fastapi import APIRouter, FastAPI
 
 from loancopilot import embeddings, rerank
 from loancopilot.config import get_settings
-from loancopilot.routes import admin, analysis, auth, cases, chat, documents
+from loancopilot.routes import admin, analysis, auth, cases, chat, documents, matching
 
 
 def _warm_models() -> None:
@@ -40,7 +40,7 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-for module in (auth, cases, documents, analysis, chat, admin):
+for module in (auth, cases, documents, analysis, chat, matching, admin):
     api.include_router(module.router)
 
 app.include_router(api)

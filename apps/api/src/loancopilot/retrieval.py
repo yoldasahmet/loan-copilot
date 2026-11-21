@@ -3,8 +3,10 @@ then optionally reranked. The access filter is part of the SQL, never applied af
 
 import re
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal
+from datetime import date
+from typing import Any, Literal
 
 from sqlalchemy import ColumnElement, func, or_, select
 from sqlalchemy.orm import Session
@@ -12,7 +14,7 @@ from sqlalchemy.orm import Session
 from loancopilot import rerank as reranker
 from loancopilot.auth import allowed_case_ids
 from loancopilot.embeddings import embed
-from loancopilot.models import Chunk, Document, User
+from loancopilot.models import CaseCard, Chunk, Document, User
 
 Mode = Literal["dense", "keyword", "hybrid"]
 CANDIDATES = 40  # per retriever
@@ -65,18 +67,26 @@ def keyword_query(text: str) -> str:
     return " or ".join(dict.fromkeys(words))
 
 
-def dense_ids(db: Session, query: str, scope: Scope, n: int = CANDIDATES) -> list[uuid.UUID]:
+def _dense(db: Session, id_col: Any, embedding_col: Any, filters: Sequence[Any], query: str,
+           n: int) -> list[uuid.UUID]:  # fmt: skip
     vector = embed([query])[0]
-    stmt = (select(Chunk.id).where(*_filters(scope), Chunk.embedding.is_not(None))
-            .order_by(Chunk.embedding.cosine_distance(vector)).limit(n))  # fmt: skip
-    return list(db.scalars(stmt))
+    stmt = select(id_col).where(*filters, embedding_col.is_not(None))
+    return list(db.scalars(stmt.order_by(embedding_col.cosine_distance(vector)).limit(n)))
+
+
+def _keyword(db: Session, id_col: Any, tsv_col: Any, filters: Sequence[Any], query: str,
+             n: int) -> list[uuid.UUID]:  # fmt: skip
+    tsquery = func.websearch_to_tsquery("english", keyword_query(query))
+    stmt = select(id_col).where(*filters, tsv_col.op("@@")(tsquery))
+    return list(db.scalars(stmt.order_by(func.ts_rank_cd(tsv_col, tsquery).desc()).limit(n)))
+
+
+def dense_ids(db: Session, query: str, scope: Scope, n: int = CANDIDATES) -> list[uuid.UUID]:
+    return _dense(db, Chunk.id, Chunk.embedding, _filters(scope), query, n)
 
 
 def keyword_ids(db: Session, query: str, scope: Scope, n: int = CANDIDATES) -> list[uuid.UUID]:
-    tsquery = func.websearch_to_tsquery("english", keyword_query(query))
-    stmt = (select(Chunk.id).where(*_filters(scope), Chunk.tsv.op("@@")(tsquery))
-            .order_by(func.ts_rank_cd(Chunk.tsv, tsquery).desc()).limit(n))  # fmt: skip
-    return list(db.scalars(stmt))
+    return _keyword(db, Chunk.id, Chunk.tsv, _filters(scope), query, n)
 
 
 def rrf(rankings: list[list[uuid.UUID]], k: int = RRF_K) -> list[tuple[uuid.UUID, float]]:
@@ -138,3 +148,25 @@ def source_refs(hits: list[Hit]) -> list[dict]:
          "section": h.section, "page_from": h.page_from, "page_to": h.page_to, "text": h.text}
         for i, h in enumerate(hits, start=1)
     ]  # fmt: skip
+
+
+# ---------------------------------------------------------------- case cards (similar cases)
+
+
+def search_cards(db: Session, query: str, before: date, k: int = 5, mode: Mode = "hybrid",
+                 rerank: bool | None = None) -> list[uuid.UUID]:  # fmt: skip
+    """Historical case cards decided before `before` (no leakage), best first."""
+    eligible = [CaseCard.first_decided_on < before]
+    rankings = []
+    if mode in ("dense", "hybrid"):
+        rankings.append(_dense(db, CaseCard.case_id, CaseCard.embedding, eligible, query,
+                               CANDIDATES))  # fmt: skip
+    if mode in ("keyword", "hybrid"):
+        rankings.append(_keyword(db, CaseCard.case_id, CaseCard.tsv, eligible, query, CANDIDATES))
+    pool = [case_id for case_id, _ in rrf(rankings)[:RERANK_POOL]]
+    if not reranker.enabled(rerank) or not pool:
+        return pool[:k]
+    rows = db.execute(select(CaseCard.case_id, CaseCard.profile_text)
+                      .where(CaseCard.case_id.in_(pool)))  # fmt: skip
+    texts = {case_id: text for case_id, text in rows}
+    return reranker.rerank(query, pool, [texts[c] for c in pool], k)

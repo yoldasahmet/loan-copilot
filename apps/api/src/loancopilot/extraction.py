@@ -19,8 +19,10 @@ FIELDS = [
 ]  # fmt: skip
 TOLERANCE = Decimal("0.01")  # ±1% for the accounting identities
 
-_FIELD = {"type": "object", "properties": {"value": {"type": ["number", "null"]},
-                                            "page": {"type": ["integer", "null"]}}}  # fmt: skip
+# No nullable types: structured outputs allow few union-typed fields, so "missing" is a flag.
+_FIELD = {"type": "object", "properties": {"found": {"type": "boolean"},
+                                            "value": {"type": "number"},
+                                            "page": {"type": "integer"}}}  # fmt: skip
 SCHEMA = llm.strict_schema({
     "type": "object",
     "properties": {
@@ -126,13 +128,14 @@ def extract_report(db: Session, doc: Document) -> Financial:
     result = llm.complete(
         kind="extraction", prompt=llm.load_prompt("extraction"),
         user_content=f"Annual report {doc.year or ''}\n\n{_sources(tables)}",
-        case_id=case.id, source_ids=[str(c.id) for c in tables], schema=SCHEMA,
+        case_id=case.id, source_ids=[str(c.id) for c in tables], schema=SCHEMA, max_tokens=8000,
         pii=Pseudonymiser(company.name, [company.contact_name or ""]),
     )  # fmt: skip
     data: dict[str, Any] = result.data
     factor = Decimal(1000) if data["unit"] == "EUR_thousands" else Decimal(1)
-    displayed = {f: _decimal(data["fields"][f]["value"]) for f in FIELDS}
-    pages = {f: data["fields"][f]["page"] for f in FIELDS}
+    fields = data["fields"]
+    displayed = {f: _decimal(fields[f]["value"]) if fields[f]["found"] else None for f in FIELDS}
+    pages = {f: fields[f]["page"] if fields[f]["found"] else None for f in FIELDS}
     values = {f: (d * factor if d is not None else None) for f, d in displayed.items()}
     page_text: dict[int, str] = {}
     for c in chunks:

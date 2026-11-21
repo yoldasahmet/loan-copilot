@@ -246,3 +246,78 @@ export async function postEventStream(
     }
   }
 }
+
+export type PrecedentDecision = {
+  lender: string | null;
+  decision: "approved" | "declined" | "withdrawn";
+  amount_granted: number | null;
+  interest_rate: number | null;
+  term_months: number | null;
+  decline_reason: string | null;
+  documents_requested: string[];
+  decided_on: string;
+};
+
+export type SimilarCase = {
+  case_id: string;
+  ref: string;
+  sector_group: string | null;
+  legal_form: string;
+  region: string | null;
+  revenue: number | null;
+  solvency: number | null;
+  loan_amount: number;
+  loan_purpose: string;
+  term_months: number;
+  applied_on: string;
+  reasons: string[];
+  decisions: PrecedentDecision[];
+};
+
+export type HardCheck = {
+  check: string;
+  passed: boolean | null;
+  value: string;
+  requirement: string;
+};
+
+export type LenderMatch = {
+  lender_id: string;
+  name: string;
+  product_type: string;
+  typical_rate_min: number;
+  typical_rate_max: number;
+  checks: HardCheck[];
+  passes_hard_checks: boolean;
+  precedents: {
+    approved: number;
+    declined: number;
+    decided: number;
+    median_granted_ratio: number | null;
+  };
+  source_ids: string[];
+  summary: string | null;
+};
+
+export type LenderMatches = {
+  lenders: LenderMatch[];
+  sources: SourceRef[];
+  similar_count: number;
+  errors: string[];
+};
+
+export type Lender = {
+  id: string;
+  name: string;
+  product_type: string;
+  min_amount: string;
+  max_amount: string;
+  min_revenue: string;
+  min_years_trading: number;
+  excluded_sector_groups: string[];
+  allowed_legal_forms: string[];
+  typical_rate_min: string;
+  typical_rate_max: string;
+  active: boolean;
+  documents: Doc[];
+};

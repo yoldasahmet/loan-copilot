@@ -79,7 +79,7 @@ def _standalone_query(question: str, transcript: str, case_id: uuid.UUID,
         kind="query_rewrite",
         prompt=llm.load_prompt("query_rewrite"),
         user_content=f"Conversation:\n{transcript}\n\nLatest question: {question}",
-        case_id=case_id, user_id=user_id, pii=pii, max_tokens=200, effort="low",
+        case_id=case_id, user_id=user_id, pii=pii, max_tokens=1000, effort="low",
     )  # fmt: skip
     return rewritten.text.strip() or question
 

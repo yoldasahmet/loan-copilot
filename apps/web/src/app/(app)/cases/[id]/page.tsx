@@ -8,6 +8,8 @@ import { DocumentsTab } from "@/components/case/documents-tab";
 import { NaturalPersonBanner } from "@/components/case/natural-person-banner";
 import { OverviewTab } from "@/components/case/overview-tab";
 import { ChatSheet } from "@/components/chat/chat-sheet";
+import { LendersTab } from "@/components/matching/lenders-tab";
+import { SimilarTab } from "@/components/matching/similar-tab";
 import { ErrorState } from "@/components/states";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +20,8 @@ const TABS = {
   overview: "Overview",
   documents: "Documents",
   analysis: "Analysis",
+  similar: "Similar cases",
+  lenders: "Lenders",
 } as const;
 
 function CasePage() {
@@ -70,6 +74,12 @@ function CasePage() {
         </TabsContent>
         <TabsContent value="analysis" className="pt-4">
           <AnalysisTab caseId={c.id} />
+        </TabsContent>
+        <TabsContent value="similar" className="pt-4">
+          <SimilarTab caseId={c.id} />
+        </TabsContent>
+        <TabsContent value="lenders" className="pt-4">
+          <LendersTab caseId={c.id} />
         </TabsContent>
       </Tabs>
       <ChatSheet caseId={c.id} open={chatOpen} onOpenChange={setChat} />

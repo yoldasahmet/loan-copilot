@@ -64,10 +64,10 @@ def test_extract_report_converts_thousands_and_logs_the_run(login, fake_llm) -> 
         db.add(Chunk(document_id=doc_id, case_id=case_id, kind="table", page_from=3, page_to=3,
                      text=THOUSANDS_TABLE, context_header="Company: Wessel IT B.V."))  # fmt: skip
         db.commit()
-    fields = {f: {"value": None, "page": None} for f in FIELDS}
-    fields.update(cash={"value": 211, "page": 3}, total_assets={"value": 900, "page": 3},
-                  equity={"value": 405, "page": 3}, long_term_debt={"value": 80, "page": 3},
-                  current_liabilities={"value": 415, "page": 3})  # fmt: skip
+    fields = {f: {"found": False, "value": 0, "page": 0} for f in FIELDS}
+    for field, value in [("cash", 211), ("total_assets", 900), ("equity", 405),
+                         ("long_term_debt", 80), ("current_liabilities", 415)]:  # fmt: skip
+        fields[field] = {"found": True, "value": value, "page": 3}
     fake_llm.queue({"unit": "EUR_thousands", "year": 2025, "fields": fields})
 
     from loancopilot.extraction import extract_report
@@ -80,9 +80,9 @@ def test_extract_report_converts_thousands_and_logs_the_run(login, fake_llm) -> 
         assert row.sources["cash"] == {"document_id": doc_id, "page": 3}
         flagged = {w["field"] for w in row.warnings}
         assert "total_assets" not in flagged and "cash" not in flagged  # found on page 3
-        assert "revenue" in flagged  # null → "Not found in the report."
+        assert "revenue" in flagged  # found=false → "Not found in the report."
         run = db.scalar(select(AiRun).where(AiRun.kind == "extraction"))
-        assert run.prompt_version == "extraction-v1" and run.input_tokens == 120
+        assert run.prompt_version == "extraction-v2" and run.input_tokens == 120
         assert run.model == "fake-model"
         assert run.cost_usd > 0 and str(run.case_id) == case_id
     sent = fake_llm.requests[0]

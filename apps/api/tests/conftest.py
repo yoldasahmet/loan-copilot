@@ -20,6 +20,11 @@ os.environ["EMBEDDINGS_BACKEND"] = "fake"
 os.environ["RERANK"] = "off"
 os.environ["SESSION_SECRET"] = "test-secret"
 os.environ["ANTHROPIC_API_KEY"] = ""
+# Tests never depend on a developer's .env: pin every LLM setting.
+os.environ.update({"LLM_PROVIDER": "auto", "LLM_MODEL": "claude-opus-5-5",
+                   "OPENAI_API_KEY": "", "OPENROUTER_API_KEY": "",
+                   "LLM_PRICE_INPUT_PER_MTOK": "4", "LLM_PRICE_OUTPUT_PER_MTOK": "20",
+                   "RATE_LIMIT_PER_MINUTE": "30", "ASSUMED_INTEREST_RATE": "0.08"})  # fmt: skip
 
 
 def _create_database() -> None:

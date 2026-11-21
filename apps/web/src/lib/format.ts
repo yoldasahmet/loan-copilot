@@ -137,3 +137,12 @@ export const CATEGORY_LABELS: Record<string, string> = {
   bank_fees: "Bank fees",
   other: "Other",
 };
+
+export const PRODUCT_TYPES: Record<string, string> = {
+  term_loan: "Term loan",
+  alternative_lender: "Alternative lender",
+  crowdfunding: "Crowdfunding",
+  equipment_lease: "Equipment lease",
+  invoice_finance: "Invoice finance",
+  growth_fund: "Growth fund",
+};
