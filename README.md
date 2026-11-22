@@ -5,8 +5,10 @@ SME Loan Copilot helps loan advisors prepare SME loan applications. Upload a com
 | Dashboard | Analysis |
 |---|---|
 | ![Dashboard](docs/screenshots/01-dashboard-light.png) | ![Analysis with the cash-flow chart](docs/screenshots/05-case-analysis-light.png) |
-| **Similar cases** | **Injection warning** |
-| ![Similar cases and their lender decisions](docs/screenshots/06-similar-cases-light.png) | ![A flagged document](docs/screenshots/10-injection-warning-light.png) |
+| **Lender matching** | **Cited memo** |
+| ![Lenders with hard checks, precedents and cited fit summaries](docs/screenshots/07-lenders-light.png) | ![The memo with a source passage open](docs/screenshots/08-memo-light.png) |
+| **Chat with the documents** | **Similar cases** |
+| ![Chat answers with citations](docs/screenshots/09-chat-light.png) | ![Similar cases and their lender decisions](docs/screenshots/06-similar-cases-light.png) |
 
 More screens, in light and dark, are in [`docs/screenshots/`](docs/screenshots/).
 
