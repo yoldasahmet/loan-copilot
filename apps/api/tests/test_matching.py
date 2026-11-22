@@ -49,7 +49,8 @@ def test_lender_matches_with_checks_precedents_and_cited_summary(login, fake_llm
     a.post(f"/api/cases/{case_id}/analysis/run")
     fake_llm.queue({"summaries": [
         {"lender": "Testbank", "summary": "Testbank finances equipment for construction [S1]."},
-        {"lender": "Smallbank", "summary": "The requested amount is above Smallbank's maximum."},
+        {"lender": "Smallbank (term loan)",  # models often echo the product type
+         "summary": "The requested amount is above Smallbank's maximum."},
     ]})  # fmt: skip
     result = a.get(f"/api/cases/{case_id}/lenders").json()
     names = [lender["name"] for lender in result["lenders"]]
@@ -60,6 +61,7 @@ def test_lender_matches_with_checks_precedents_and_cited_summary(login, fake_llm
     assert result["sources"][0]["id"] == "S1"
     small = result["lenders"][1]
     assert not small["passes_hard_checks"]
+    assert small["summary"] == "The requested amount is above Smallbank's maximum."
     assert next(c for c in small["checks"] if c["check"] == "Loan amount")["passed"] is False
     assert "score" not in str(result).lower()
     again = a.get(f"/api/cases/{case_id}/lenders").json()  # served from cache: no second call

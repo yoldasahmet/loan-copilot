@@ -1,6 +1,7 @@
 """Lender matching: hard checks and precedent counts in code, criteria passages from
 retrieval, one LLM call for cited fit summaries. No single score: the facts are shown."""
 
+import re
 import statistics
 import uuid
 from decimal import Decimal
@@ -141,6 +142,11 @@ def _add_summaries(db: Session, case: Case, profile: str, items: list[dict], hit
         case_id=case.id, source_ids=[str(h.chunk_id) for h in hits], schema=SUMMARY_SCHEMA,
         pii=case_pseudonymiser(db, case.id), max_tokens=6000,
     )  # fmt: skip
-    by_name = {s["lender"].lower(): s["summary"] for s in result.data["summaries"]}
+    by_name = {_lender_key(s["lender"]): s["summary"] for s in result.data["summaries"]}
     for item in items:
-        item["summary"] = by_name.get(item["name"].lower())
+        item["summary"] = by_name.get(_lender_key(item["name"]))
+
+
+def _lender_key(name: str) -> str:
+    """Models often echo the facts line's "Name (product type)"; match on the name alone."""
+    return re.sub(r"\s*\([^)]*\)\s*$", "", name).strip().lower()
