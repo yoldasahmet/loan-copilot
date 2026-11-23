@@ -56,17 +56,22 @@ Retrieval on 48 golden questions over the synthetic demo cases (latency is retri
 
 | Pipeline | Recall@5 | MRR@10 | Faithfulness | p95 latency |
 |---|---|---|---|---|
-| Dense only | 97.9% | 0.688 | — | 141 ms |
-| Keyword only | 87.5% | 0.567 | — | 6 ms |
-| Hybrid (RRF) | 97.9% | 0.743 | — | 123 ms |
-| Hybrid + rerank | 91.7% | 0.743 | — | 4,262 ms |
+| Dense only | 97.9% | 0.688 | — | 136 ms |
+| Keyword only | 87.5% | 0.567 | — | 7 ms |
+| Hybrid (RRF) | 97.9% | 0.743 | — | 137 ms |
+| Hybrid + rerank | 91.7% | 0.743 | 1.000 | 11,049 ms |
+
+With GLM 5.3 Flash (via OpenRouter) as both the model and the judge:
+- **Answers:** faithfulness 1.000, answer relevancy 0.636. All 5 unanswerable questions got the "can't find" reply, and no answerable question did.
+- **Extraction:** 100% of figures within 0.5% across 20 annual reports in three layouts, with no validation warnings.
+- **Memo verification:** 3 of 4 first drafts had every number verified; after one redraft all 4 did (337 numbers checked).
 
 Backtest on the 46 most recent historical cases, where each sees only cases decided before its application date:
 - **Lender hit@3:** 93.1%, against 66.0% for a random order and 79.3% for "most popular lender first".
 - **Precedent agreement:** 43.5%, below the 58.7% of always predicting the most common outcome.
 - **Amount coverage:** 21.4%.
 
-So precedents are shown as context, never as a prediction. Answer faithfulness, extraction accuracy and memo verification need a working LLM and were not part of this run.
+So precedents are shown as context, never as a prediction. The reranker runs on CPU, which is why it dominates latency; it is the step to move to a GPU or drop when speed matters more than ranking.
 
 See [`docs/eval-results.md`](docs/eval-results.md) for every table and how to read them. The evaluation runs locally against synthetic data (`make eval EVAL_DIR=…`); CI never runs it.
 
